@@ -15,9 +15,21 @@ rat_data <- report_data %>%
   left_join(district_data,
             join_by("Council District" == "council_district_id"))
 
+council_data <- report_data %>%
+  mutate(`Council District` = as.numeric(`Council District`)) %>%
+  summarize(reports = n(),
+            .by = `Council District`) %>%
+  inner_join(district_data,
+            join_by("Council District" == "council_district_id")) %>%
+  select(-council_district_name)
+
 
 # Writing Data ----------------------------------------------------------
 
 vroom_write(rat_data,
             file = "rats.csv",
+            delim = ",")
+
+vroom_write(council_data,
+            file = "councils.csv",
             delim = ",")

@@ -1,0 +1,123 @@
+---
+title: "Model Exploration A"
+author: "Matthew Walker"
+format: pdf
+---
+
+```{r, libraries, include = F}
+library(tidyverse)
+library(tidymodels)
+library(vroom)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(tigris)
+library(corrplot)
+library(MASS)
+options(tigris_use_cache = TRUE)
+```
+
+```{r, reading in data, include = F}
+rats_data <- vroom("rats.csv")
+council_data <- vroom("councils.csv")
+```
+
+```{r, prepping spatial data}
+# # This code was written with help from Microsoft Copilot
+# 
+# # rats layer
+# rats_sf <- rats_data %>%
+#   filter(!(is.na(Longitude)) & !(is.na(Latitude))) %>%
+#   st_as_sf(.,
+#   coords = c("Longitude", "Latitude"),
+#   crs = 4326
+# )
+# 
+# # New York layer
+# nyc <- county_subdivisions(state = "NY", year = 2023, class = "sf") %>%
+#   filter(COUNTYFP %in% c("005", "047", "061", "081", "085"))
+# 
+# # background layers
+# # reading in background
+# land  <- ne_download(scale = 10, type = "land",  category = "physical", returnclass = "sf")
+# ocean <- ne_download(scale = 10, type = "ocean", category = "physical", returnclass = "sf")
+# 
+# # cutting down background to just NYC
+# sf_use_s2(FALSE)
+# nyc_bbox_wgs <- st_transform(st_as_sfc(st_bbox(nyc)), 4326)
+# land_nyc  <- st_intersection(land,  nyc_bbox_wgs)
+# ocean_nyc <- st_intersection(ocean, nyc_bbox_wgs)
+# sf_use_s2(TRUE)
+# 
+# # prepping the layers to go together
+# nyc_2263 <- st_transform(nyc, 2263)
+# rats_2263 <- st_transform(rats_sf, 2263)
+# land_2263 <- st_transform(land_nyc, 2263)
+# ocean_2263 <- st_transform(ocean_nyc, 2263)
+
+```
+
+```{r, making map}
+# # This code was written with help from Microsoft Copilot
+# 
+# ggplot() +
+#   geom_sf(data = ocean_2263, fill = "#a6cee3", color = NA) +
+#   geom_sf(data = land_2263,  fill = "gray95", color = NA) +
+#   # geom_sf(data = nyc_2263, fill = "gray", alpha = 0.5) +
+#   geom_sf(data = rats_2263, color = "blue", alpha = 0.05)
+```
+
+```{r, EDA}
+# setting desired predictors
+desired_variables <- c(
+  # "reports",
+  "population",
+  "housing_units",
+  "median_household_income",
+  "unemployment_rate",
+  "poverty_rate",
+  # "pct_vacant_housing_units",
+  "pct_renter_occupied_among_occupied_units",
+  # "rental_vacancy_rate",
+  "median_home_value",
+  "pct_bachelors_or_higher_proxy",
+  "pct_high_school_grad_proxy",
+  "pct_households_broadband",
+  "pct_with_disability_proxy",
+  "pct_language_other_than_english_proxy"
+  # "Council District"
+)
+
+council_data %>%
+  
+  # removing duplicate column
+  dplyr::select(-council_district_name) %>%
+  
+  # cutting down data for sanity
+  dplyr::select(all_of(c("reports", desired_variables, "Council District"))) %>%
+  
+  cor(.) %>%
+  corrplot(., tl.cex = 0.5)
+```
+
+```{r, fitting negative binomial model}
+fit_nb <- glm.nb(as.formula(paste("reports ~",
+                            paste(desired_variables, collapse = " + "))),
+                 data = council_data)
+
+summary(fit_nb)
+```
+
+```{r, basic linear model}
+fit_lm <- lm(as.formula(paste("reports ~",
+                              paste(desired_variables, collapse = " + "))),
+                 data = council_data)
+
+summary(fit_lm)
+```
+
+```{r, residuals vs. fitted values}
+ggplot(mapping = aes(x = council_data$reports)) +
+  geom_points(aes(y = fit_lm$residuals), color = "red") +
+  geom_points(aes(y = fit_nb$residuals), color = "blue")
+```

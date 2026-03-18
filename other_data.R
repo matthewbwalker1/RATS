@@ -14,7 +14,7 @@ food_data <- vroom("DSNY_Food_Scrap_Drop-Off_Locations.csv")
 # Clean Data -------------------------------------------------------------------
 
 # District Data
-distict_data <- district_data %>%
+district_data <- district_data %>%
   rename(DISTRICT_AREA=SHAPE_Area,
          DISTRICT_LENGTH=SHAPE_Length,
          DISTRICT_MP=multipolygon) %>%
@@ -59,11 +59,11 @@ food_quant_data_no_nas <- food_quant_data %>%
 
 # Join Data --------------------------------------------------------------------
 
-full_join(district_data,)
-
-
-
-
+stuff1 <- merge(district_data,freq_data,by="DISTRICT",all=TRUE)
+stuff2 <- merge(stuff1,litter_quant_data,by="SECTION",all=TRUE)
+stuff3 <- merge(stuff2,recycle_quant_data,by="DISTRICT",all=TRUE)
+all_data <- merge(stuff3,food_quant_data_no_nas,by="SECTION",all=TRUE)
+all_data[is.na(all_data)] <- 0
 
 
 

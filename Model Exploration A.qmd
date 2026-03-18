@@ -14,6 +14,7 @@ library(rnaturalearthdata)
 library(tigris)
 library(corrplot)
 library(MASS)
+library(glmnet)
 options(tigris_use_cache = TRUE)
 ```
 
@@ -106,6 +107,8 @@ fit_nb <- glm.nb(as.formula(paste("reports ~",
                  data = council_data)
 
 summary(fit_nb)
+
+fit_nb
 ```
 
 ```{r, basic linear model}
@@ -116,8 +119,22 @@ fit_lm <- lm(as.formula(paste("reports ~",
 summary(fit_lm)
 ```
 
+```{r, LASSO model}
+x <- as.matrix(scale(council_data[, -c(1:3)]))
+y <- council_data$reports
+
+fit_lasso <- cv.glmnet(x, y, alpha = 1)
+
+fit_lasso$lambda.min
+fit_lasso$lambda.1se
+
+coef(fit_lasso, s = "lambda.min")
+coef(fit_lasso, s = "lambda.1se")
+coef(fit_lasso, s = 50)
+```
+
 ```{r, residuals vs. fitted values}
 ggplot(mapping = aes(x = council_data$reports)) +
-  geom_points(aes(y = fit_lm$residuals), color = "red") +
-  geom_points(aes(y = fit_nb$residuals), color = "blue")
+  geom_point(aes(y = fit_lm$fitted.values), color = "red") +
+  geom_point(aes(y = fit_nb$fitted.values), color = "blue")
 ```

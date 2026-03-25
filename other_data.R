@@ -4,6 +4,8 @@
 library(vroom)
 library(dplyr)
 
+# Load in Data -----------------------------------------------------------------
+
 district_data <- vroom("DSNY_Districts.csv")
 freq_data <- vroom("DSNY_Frequencies.csv")
 litter_data <- vroom("DSNY_Litter_Basket_Inventory.csv")
@@ -63,7 +65,21 @@ stuff1 <- merge(district_data,freq_data,by="DISTRICT",all=TRUE)
 stuff2 <- merge(stuff1,litter_quant_data,by="SECTION",all=TRUE)
 stuff3 <- merge(stuff2,recycle_quant_data,by="DISTRICT",all=TRUE)
 all_data <- merge(stuff3,food_quant_data_no_nas,by="SECTION",all=TRUE)
+
 all_data[is.na(all_data)] <- 0
+
+
+
+
+
+
+
+
+- pest control
+- sewers
+
+
+
 
 
 

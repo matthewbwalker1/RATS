@@ -54,7 +54,7 @@ council_data <- report_data %>%
             .by = `Council District`) %>%
   inner_join(district_data,
              join_by("Council District" == "council_district_id")) %>%
-  select(-council_district_name) %>%
+  dplyr::select(-council_district_name) %>%
   mutate(rate_all = (reports/population) * 1000,
          rate_confirmed = (confirmed_reports/population) * 1000)
 
@@ -79,3 +79,4 @@ vroom_write(council_data,
 vroom_write(time_area_data,
             file = "time_area.csv",
             delim = ",")
+

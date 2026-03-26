@@ -120,7 +120,7 @@ summary(fit_lm)
 ```
 
 ```{r, LASSO model}
-x <- as.matrix(scale(council_data[, -c(1:3)]))
+x <- as.matrix(scale(council_data[, -c(1:3, 27, 28)]))
 y <- council_data$reports
 
 fit_lasso <- cv.glmnet(x, y, alpha = 1)
@@ -130,7 +130,7 @@ fit_lasso$lambda.1se
 
 coef(fit_lasso, s = "lambda.min")
 coef(fit_lasso, s = "lambda.1se")
-coef(fit_lasso, s = 50)
+coef(fit_lasso, s = 70)
 ```
 
 ```{r, predicted vs. actual values}
@@ -140,5 +140,19 @@ ggplot(mapping = aes(x = council_data$reports)) +
 ```
 
 
-```{r, looking at time series}
+```{r, LASSO model to extract most frequent cases}
+x <- as.matrix(scale(council_data[, -c(1:3, 7:10, 27, 28)]))
+y <- council_data$reports
+
+fit_lasso_reports <- cv.glmnet(x, 
+                      log(council_data$reports), alpha = 1)
+fit_lasso_confirmed <- cv.glmnet(x, 
+                      log(council_data$confirmed_reports), alpha = 1)
+fit_lasso_ratio <- cv.glmnet(x, 
+                      log(council_data$confirmed_reports / council_data$reports),
+                      alpha = 1)
+
+coef(fit_lasso_reports, s = 0.14)
+coef(fit_lasso_confirmed, s = 0.14)
+coef(fit_lasso_ratio, s = 0.032)
 ```

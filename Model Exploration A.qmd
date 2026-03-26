@@ -133,8 +133,12 @@ coef(fit_lasso, s = "lambda.1se")
 coef(fit_lasso, s = 50)
 ```
 
-```{r, residuals vs. fitted values}
+```{r, predicted vs. actual values}
 ggplot(mapping = aes(x = council_data$reports)) +
   geom_point(aes(y = fit_lm$fitted.values), color = "red") +
   geom_point(aes(y = fit_nb$fitted.values), color = "blue")
+```
+
+
+```{r, looking at time series}
 ```

@@ -2,7 +2,7 @@ library(tidyverse)
 library(lubridate)
 
 # ── Load data ──────────────────────────────────────────────────────────────────
-rats <- read_csv("~/Desktop/rats.csv")
+rats <- read_csv("rats_nospaces.csv")
 
 # Quick sanity checks
 cat("Rows:", nrow(rats), "\n")
@@ -13,8 +13,8 @@ table(rats$Borough)
 # ── Derive temporal variables ──────────────────────────────────────────────────
 rats <- rats %>%
   mutate(
-    created             = mdy_hms(`Created Date`),
-    closed              = mdy_hms(`Closed Date`),
+    created             = mdy_hms(`Created_Date`),
+    closed              = mdy_hms(`Closed_Date`),
     response_time_hours = as.numeric(difftime(closed, created, units = "hours")),
     month               = month(created),
     day_of_week         = wday(created, label = TRUE)
@@ -23,15 +23,18 @@ rats <- rats %>%
 
 cat("Rows after filter:", nrow(rats), "\n")
 
+# Rename column with parentheses so TukeyHSD can look it up correctly
+rats <- rats %>% rename(Problem_Detail = `Problem_Detail_(formerly_Descriptor)`)
+
 # ── Simplify Location Type ─────────────────────────────────────────────────────
 rats <- rats %>%
   mutate(
     location_group = case_when(
-      str_detect(`Location Type`, regex("1-2|3\\+|apartment|residential", ignore_case = TRUE)) ~ "Residential",
-      str_detect(`Location Type`, regex("store|commercial|restaurant|food|market",  ignore_case = TRUE)) ~ "Commercial",
-      str_detect(`Location Type`, regex("park|playground|garden|lot",               ignore_case = TRUE)) ~ "Outdoor/Park",
-      str_detect(`Location Type`, regex("school|hospital|public|government",        ignore_case = TRUE)) ~ "Public/Institutional",
-      str_detect(`Location Type`, regex("street|sidewalk|alley|catch basin",        ignore_case = TRUE)) ~ "Street/Infrastructure",
+      str_detect(`Location_Type`, regex("1-2|3\\+|apartment|residential", ignore_case = TRUE)) ~ "Residential",
+      str_detect(`Location_Type`, regex("store|commercial|restaurant|food|market",  ignore_case = TRUE)) ~ "Commercial",
+      str_detect(`Location_Type`, regex("park|playground|garden|lot",               ignore_case = TRUE)) ~ "Outdoor/Park",
+      str_detect(`Location_Type`, regex("school|hospital|public|government",        ignore_case = TRUE)) ~ "Public/Institutional",
+      str_detect(`Location_Type`, regex("street|sidewalk|alley|catch basin",        ignore_case = TRUE)) ~ "Street/Infrastructure",
       TRUE ~ "Other"
     )
   )
@@ -50,15 +53,15 @@ qqline(log(rats$response_time_hours + 1), col = "red")
 
 # Boxplots
 boxplot(response_time_hours ~ Borough, data = rats,
-        main = "Response Time by Borough", ylab = "Hours",
+        main = "Response Time by Borough", ylab = "Hours", xlab = "",
         las = 2, col = "lightblue")
 
-boxplot(response_time_hours ~ `Problem Detail`, data = rats,
-        main = "Response Time by Problem Type", ylab = "Hours",
+boxplot(response_time_hours ~ Problem_Detail, data = rats,
+        main = "Response Time by Problem Type", ylab = "Hours", xlab = "",
         las = 2, col = "lightgreen")
 
 boxplot(response_time_hours ~ location_group, data = rats,
-        main = "Response Time by Location Group", ylab = "Hours",
+        main = "Response Time by Location Group", ylab = "Hours", xlab = "",
         las = 2, col = "lightyellow")
 
 # ── One-Factor ANOVAs ──────────────────────────────────────────────────────────
@@ -71,21 +74,21 @@ print(TukeyHSD(model1a))
 plot(model1a, main = "Model 1a Diagnostics")
 
 # 1b. Response time ~ Problem Detail
-model1b <- aov(response_time_hours ~ `Problem Detail`, data = rats)
-cat("\n── ANOVA: response_time_hours ~ Problem Detail ──\n")
+model1b <- aov(response_time_hours ~ Problem_Detail, data = rats)
+cat("\n── ANOVA: response_time_hours ~ Problem_Detail_──\n")
 print(summary(model1b))
 print(TukeyHSD(model1b))
 
 # 1c. Response time ~ Location Group
 model1c <- aov(response_time_hours ~ location_group, data = rats)
-cat("\n── ANOVA: response_time_hours ~ Location Group ──\n")
+cat("\n── ANOVA: response_time_hours ~ Location_Group_──\n")
 print(summary(model1c))
 print(TukeyHSD(model1c))
 
 # ── Two-Factor ANOVAs ──────────────────────────────────────────────────────────
 
 # 2a. Borough × Problem Detail (with interaction)
-model2a <- aov(response_time_hours ~ Borough * `Problem Detail`, data = rats)
+model2a <- aov(response_time_hours ~ Borough * Problem_Detail, data = rats)
 cat("\n── ANOVA: response_time_hours ~ Borough * Problem Detail ──\n")
 print(summary(model2a))
 
@@ -96,7 +99,7 @@ print(summary(model2b))
 
 # ── District-level aggregation (per-capita analysis) ──────────────────────────
 district_summary <- rats %>%
-  group_by(`Council District`, Borough, population,
+  group_by(`Council_District`, Borough, population,
            median_household_income, poverty_rate) %>%
   summarise(n_complaints = n(), .groups = "drop") %>%
   mutate(complaints_per_1000 = n_complaints / population * 1000)
@@ -112,25 +115,25 @@ print(TukeyHSD(model3))
 
 boxplot(complaints_per_1000 ~ Borough, data = district_summary,
         main = "Rodent Complaints per 1,000 Residents by Borough",
-        ylab = "Complaints per 1,000", las = 2, col = "salmon")
+        ylab = "Complaints per 1,000", xlab = "", las = 2, col = "salmon")
 
 # ── Chi-Square Tests ───────────────────────────────────────────────────────────
 
 # 4a. Problem Detail independent of Borough?
-tbl_pd_boro <- table(rats$`Problem Detail`, rats$Borough)
+tbl_pd_boro <- table(rats$`Problem_Detail`, rats$Borough)
 cat("\n── Chi-Square: Problem Detail × Borough ──\n")
 print(chisq.test(tbl_pd_boro))
 
 # 4b. Channel type independent of Borough?
-tbl_ch_boro <- table(rats$`Open Data Channel Type`, rats$Borough)
+tbl_ch_boro <- table(rats$`Open_Data_Channel_Type`, rats$Borough)
 cat("\n── Chi-Square: Channel Type × Borough ──\n")
 print(chisq.test(tbl_ch_boro))
 
 # ── Optional: log-transform ANOVA for more valid inference ────────────────────
 rats <- rats %>% mutate(log_response = log(response_time_hours + 1))
 
-model_log <- aov(log_response ~ Borough * `Problem Detail`, data = rats)
-cat("\n── ANOVA (log-transformed): log(response+1) ~ Borough * Problem Detail ──\n")
+model_log <- aov(log_response ~ Borough * `Problem_Detail`, data = rats)
+cat("\n── ANOVA (log-transformed): log(response+1) ~ Borough * Problem_Detail_──\n")
 print(summary(model_log))
 plot(model_log, main = "Log-Transform Model Diagnostics")
 

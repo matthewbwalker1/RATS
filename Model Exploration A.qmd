@@ -102,8 +102,11 @@ council_data %>%
 ```
 
 ```{r, fitting negative binomial model}
-fit_nb <- glm.nb(as.formula(paste("reports ~",
-                            paste(desired_variables, collapse = " + "))),
+fit_nb <- glm.nb(confirmed_reports ~ 
+                 households + pct_renter_occupied_among_occupied_units,
+  # as.formula(
+                            # paste("reports ~",
+                            # paste(desired_variables, collapse = " + "))),
                  data = council_data)
 
 summary(fit_nb)
@@ -134,9 +137,10 @@ coef(fit_lasso, s = 70)
 ```
 
 ```{r, predicted vs. actual values}
-ggplot(mapping = aes(x = council_data$reports)) +
-  geom_point(aes(y = fit_lm$fitted.values), color = "red") +
-  geom_point(aes(y = fit_nb$fitted.values), color = "blue")
+ggplot(mapping = aes(x = log(council_data$confirmed_reports))) +
+  geom_point(aes(y = fit_confirmed$fitted.values), color = "red") +
+  geom_point(aes(y = log(fit_nb$fitted.values)), color = "blue") +
+  geom_point(aes(y = log(council_data$confirmed_reports)), color = "black")
 ```
 
 
@@ -148,11 +152,52 @@ fit_lasso_reports <- cv.glmnet(x,
                       log(council_data$reports), alpha = 1)
 fit_lasso_confirmed <- cv.glmnet(x, 
                       log(council_data$confirmed_reports), alpha = 1)
-fit_lasso_ratio <- cv.glmnet(x, 
+fit_lasso_ratio <- cv.glmnet(x[,-c(2, 11)], 
                       log(council_data$confirmed_reports / council_data$reports),
                       alpha = 1)
 
 coef(fit_lasso_reports, s = 0.14)
 coef(fit_lasso_confirmed, s = 0.14)
-coef(fit_lasso_ratio, s = 0.032)
+coef(fit_lasso_ratio, s = 0.05
+     )
+```
+
+
+```{r, getting CI's for coefficients found with LASSO}
+x <- as.matrix(scale(council_data[, -c(1:3, 7:10, 27, 28)]))
+y <- council_data$reports
+
+fit_lasso_reports <- cv.glmnet(x, 
+                      log(council_data$reports), alpha = 1,
+                      family = "gaussian")
+fit_lasso_confirmed <- cv.glmnet(x, 
+                      log(council_data$confirmed_reports), alpha = 1,
+                      family = "gaussian")
+fit_lasso_ratio <- cv.glmnet(x, 
+                      log(council_data$confirmed_reports / council_data$reports),
+                      alpha = 1)
+
+fit_reports <- lm(log(reports) ~ households + pct_renter_occupied_among_occupied_units,
+                  data = council_data)
+fit_confirmed <- lm(log(confirmed_reports) ~ households + 
+                      pct_renter_occupied_among_occupied_units,
+                  data = council_data)
+fit_ratio <- lm(log(confirmed_reports / reports)
+                  population +
+                  # pct_renter_occupied_among_occupied_units +
+                  rental_vacancy_rate +
+                  median_home_value,
+                  data = council_data)
+
+summary(fit_reports)
+summary(fit_confirmed)
+summary(fit_ratio)
+```
+
+```{r, making graphic}
+council_data %>%
+  ggplot(mapping = aes(x = pct_renter_occupied_among_occupied_units,
+                       y = log(confirmed_reports))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = F)
 ```

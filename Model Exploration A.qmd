@@ -145,49 +145,56 @@ ggplot(mapping = aes(x = log(council_data$confirmed_reports))) +
 
 
 ```{r, LASSO model to extract most frequent cases}
-x <- as.matrix(scale(council_data[, -c(1:3, 7:10, 27, 28)]))
+x <- as.matrix(scale(council_data[, -c(1:4, 7:10, 27, 28)]))
 y <- council_data$reports
 
 fit_lasso_reports <- cv.glmnet(x, 
-                      log(council_data$reports), alpha = 1)
+                      log(council_data$reports / council_data$population), alpha = 1)
 fit_lasso_confirmed <- cv.glmnet(x, 
-                      log(council_data$confirmed_reports), alpha = 1)
+                      log(council_data$confirmed_reports / council_data$population), alpha = 1)
 fit_lasso_ratio <- cv.glmnet(x[,-c(2, 11)], 
                       log(council_data$confirmed_reports / council_data$reports),
                       alpha = 1)
 
-coef(fit_lasso_reports, s = 0.14)
-coef(fit_lasso_confirmed, s = 0.14)
-coef(fit_lasso_ratio, s = 0.05
-     )
+coef(fit_lasso_reports, s = 0.1)
+coef(fit_lasso_confirmed, s = 0.07)
+coef(fit_lasso_ratio, s = 0.05)
 ```
 
 
 ```{r, getting CI's for coefficients found with LASSO}
-x <- as.matrix(scale(council_data[, -c(1:3, 7:10, 27, 28)]))
+x <- as.matrix(scale(council_data[, -c(1:4, 7:10, 27, 28)]))
 y <- council_data$reports
 
 fit_lasso_reports <- cv.glmnet(x, 
-                      log(council_data$reports), alpha = 1,
+                      log(council_data$reports/council_data$population), alpha = 1,
                       family = "gaussian")
 fit_lasso_confirmed <- cv.glmnet(x, 
-                      log(council_data$confirmed_reports), alpha = 1,
+                      log(council_data$confirmed_reports/council_data$population), alpha = 1,
                       family = "gaussian")
 fit_lasso_ratio <- cv.glmnet(x, 
                       log(council_data$confirmed_reports / council_data$reports),
                       alpha = 1)
 
-fit_reports <- lm(log(reports) ~ households + pct_renter_occupied_among_occupied_units,
+fit_reports <- lm(log(reports/population) ~ 
+                    # households +
+                    pct_renter_occupied_among_occupied_units +
+                    pct_language_other_than_english_proxy +
+                    pct_households_broadband,
                   data = council_data)
-fit_confirmed <- lm(log(confirmed_reports) ~ households + 
-                      pct_renter_occupied_among_occupied_units,
+fit_confirmed <- lm(log(confirmed_reports/population) ~ 
+                      # households +
+                      pct_renter_occupied_among_occupied_units +
+                      pct_language_other_than_english_proxy +
+                      pct_households_broadband,
                   data = council_data)
-fit_ratio <- lm(log(confirmed_reports / reports)
+fit_ratio <- lm(log(confirmed_reports / reports) ~
                   population +
                   # pct_renter_occupied_among_occupied_units +
                   rental_vacancy_rate +
                   median_home_value,
                   data = council_data)
+
 
 summary(fit_reports)
 summary(fit_confirmed)
@@ -197,7 +204,17 @@ summary(fit_ratio)
 ```{r, making graphic}
 council_data %>%
   ggplot(mapping = aes(x = pct_renter_occupied_among_occupied_units,
-                       y = log(confirmed_reports))) +
-  geom_point() +
-  geom_smooth(method = "lm", se = F)
+                       y = confirmed_reports / population * 1000)) +
+  geom_point(color = "gray40") +
+  geom_smooth(method = "lm", se = F) +
+  scale_y_continuous(transform = "log10",
+                     breaks = c(0.25, 0.5, 1.0, 2.0)) +
+  scale_x_continuous(breaks = c(0.2, 0.4, 0.6, 0.8),
+                     labels = c("20%", "40%", "60%", "80%")) +
+  labs(title = "Rate of Confirmed Rodent Reports By Percent of Housing Units Rented",
+       x = "Percent of Housing Units Occupied As Rentals",
+       y = "Confirmed Rodent Reports Per 1000 People")
+```
+
+```{r, reporting final values}
 ```
